@@ -1,0 +1,73 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Exklusives Angebot für Ihren Aufenthalt</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            line-height: 1.6;
+            color: #333;
+        }
+
+        .container {
+            max-width: 600px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+
+        .offer {
+            background-color: #f0f0f0;
+            border-radius: 5px;
+            padding: 15px;
+            margin-bottom: 20px;
+        }
+
+        .offer-price {
+            font-weight: bold;
+            color: #009900;
+        }
+
+        .regular-price {
+            text-decoration: line-through;
+            color: #999;
+        }
+    </style>
+</head>
+<body>
+<div class="container">
+    <h1>Hallo {{ guest_name }},</h1>
+
+    <p>ich hoffe, Sie freuen sich auf Ihren Aufenthalt bei uns im {{ apartment }}! Wir haben ein exklusives Angebot für
+        Sie, das Ihren Aufenthalt noch angenehmer machen könnte:</p>
+
+    {% if arrival_event and arrival_event.free_days > 0 %}
+    <div class="offer">
+        <h2>🏡 Möglichkeit zur früheren Anreise:</h2>
+        <p>Ihre aktuelle Buchung beginnt am {{ arrival_event.date.strftime('%d.%m.%Y') }}.</p>
+        <p>Wir haben {{ arrival_event.free_days }} Tag{% if arrival_event.free_days != 1 %}e{% endif %} unmittelbar vor
+            Ihrer Buchung verfügbar, zum Sonderpreis von nur <span class="offer-price">{{ arrival_event.offer_price|round(2) }} €</span>
+            pro Nacht <span class="regular-price">(regulärer Preis: {{ arrival_event.price|round(2) }} €)</span>.</p>
+    </div>
+    {% endif %}
+
+    {% if departure_event and departure_event.free_days > 0 %}
+    <div class="offer">
+        <h2>🧼 Möglichkeit zur Verlängerung Ihres Aufenthalts:</h2>
+        <p>Ihre aktuelle Buchung endet am {{ departure_event.date.strftime('%d.%m.%Y') }}.</p>
+        <p>Wir haben {{ departure_event.free_days }} Tag{% if departure_event.free_days != 1 %}e{% endif %} unmittelbar
+            nach Ihrer Buchung verfügbar, zum Sonderpreis von nur <span class="offer-price">{{ departure_event.offer_price|round(2) }} €</span>
+            pro Nacht <span class="regular-price">(regulärer Preis: {{ departure_event.price|round(2) }} €)</span>.</p>
+    </div>
+    {% endif %}
+
+    <p>Dieses Angebot steht exklusiv für Sie zur Verfügung. Wenn Sie Interesse haben, Ihren Aufenthalt zu verlängern,
+        lassen Sie es uns bitte wissen. Wir passen Ihre Reservierung gerne entsprechend an.</p>
+
+    <p>Wir freuen uns darauf, Sie bald bei uns begrüßen zu dürfen!</p>
+
+    <p>Herzliche Grüße,<br>Ihr Levax Living Team</p>
+</div>
+</body>
+</html>
