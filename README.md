@@ -1,4 +1,4 @@
-# 🗓️ Smoobu Free Days Dealer: Maximize Your Occupancy with Smoobu API
+# 💰 Smoobu Free Days Dealer: Maximize Your Occupancy with Smoobu API
 
 Welcome to Smoobu Free Days Dealer, your intelligent assistant for identifying and filling gaps in your Smoobu apartment booking calendar!
 
