@@ -54,7 +54,7 @@
 
     {% if departure_event and departure_event.free_days > 0 %}
     <div class="offer">
-        <h2>🧼 Möglichkeit zur Verlängerung Ihres Aufenthalts:</h2>
+        <h2>☀️ Möglichkeit zur Verlängerung Ihres Aufenthalts:</h2>
         <p>Ihre aktuelle Buchung endet am {{ departure_event.date.strftime('%d.%m.%Y') }}.</p>
         <p>Wir haben {{ departure_event.free_days }} Tag{% if departure_event.free_days != 1 %}e{% endif %} unmittelbar
             nach Ihrer Buchung verfügbar, zum Sonderpreis von nur <span class="offer-price">{{ departure_event.offer_price|round(2) }} €</span>
