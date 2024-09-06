@@ -21,16 +21,14 @@ class APIClient(ABC):
 
     🔗 In the context of the Smoobu application:
     This abstract class is the foundation for API clients like SmoobuAPIClient,
-    ensuring they all adhere to a common interface for making GET requests.
+    ensuring they all adhere to a common interface for making GET and POST requests,
+    as well as specific operations like sending messages to hosts.
     """
 
     @abstractmethod
     def get(self, endpoint: str) -> Dict[str, Any]:
         """
         🔍 Abstract method to perform a GET request to a specified API endpoint.
-
-        This method must be implemented by all concrete API client classes.
-        It takes an endpoint string and returns the API response as a dictionary.
 
         Args:
             endpoint (str): The API endpoint to send the GET request to.
@@ -41,16 +39,43 @@ class APIClient(ABC):
         Raises:
             NotImplementedError: If the method is not implemented in a concrete subclass.
             SmoobuAPIError: If there's an error in the API request (in implementations).
+        """
+        pass
 
-        Example implementation in a subclass:
-        ```python
-        def get(self, endpoint: str) -> Dict[str, Any]:
-            response = requests.get(f"{self.base_url}/{endpoint}", headers=self.headers)
-            response.raise_for_status()
-            return response.json()
-        ```
+    @abstractmethod
+    def post(self, endpoint: str, data: Dict[str, Any]) -> Dict[str, Any]:
+        """
+        📤 Abstract method to perform a POST request to a specified API endpoint.
 
-        💡 Note: Concrete implementations should handle authentication, error checking,
-        and any necessary data preprocessing or postprocessing.
+        Args:
+            endpoint (str): The API endpoint to send the POST request to.
+            data (Dict[str, Any]): The data to be sent in the request body.
+
+        Returns:
+            Dict[str, Any]: A dictionary containing the API response data.
+
+        Raises:
+            NotImplementedError: If the method is not implemented in a concrete subclass.
+            SmoobuAPIError: If there's an error in the API request (in implementations).
+        """
+        pass
+
+    @abstractmethod
+    def send_message_to_host(self, reservation_id: int, subject: str, message_body: str, internal: bool = False) -> Dict[str, Any]:
+        """
+        💬 Abstract method to send a message to the host for a specific reservation.
+
+        Args:
+            reservation_id (int): The ID of the reservation.
+            subject (str): The subject of the message.
+            message_body (str): The content of the message.
+            internal (bool, optional): If True, the message will only be visible to the host. Defaults to False.
+
+        Returns:
+            Dict[str, Any]: A dictionary containing the API response data.
+
+        Raises:
+            NotImplementedError: If the method is not implemented in a concrete subclass.
+            SmoobuAPIError: If there's an error in sending the message (in implementations).
         """
         pass
