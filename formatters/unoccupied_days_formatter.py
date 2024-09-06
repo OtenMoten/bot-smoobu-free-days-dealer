@@ -1,10 +1,14 @@
+import logging
+import os
 from datetime import datetime, timedelta
 from jinja2 import Environment, FileSystemLoader
 from typing import Dict, List, Optional
 
 from dto.util import DateRange, Event, ColorScheme
 from interfaces.formatter import Formatter
-from services.email_sender import EmailSender
+from services.smoobu_service import SmoobuService
+
+logger = logging.getLogger(__name__)
 
 
 class UnoccupiedDaysFormatter(Formatter):
@@ -14,14 +18,14 @@ class UnoccupiedDaysFormatter(Formatter):
     This class implements the Formatter interface and provides methods to:
     - Analyze booking data for unoccupied periods
     - Format the analysis results into a colorful, human-readable string output
-    - Generate and send personalized email offers to guests
+    - Generate and send personalized messages offers to guests
 
     🎨 Features:
     - Color-coded output for easy visual parsing
     - Identification of arrival and departure events
     - Calculation of free days before arrivals and after departures
     - Dynamic pricing suggestions for unoccupied periods
-    - Automated email generation for personalized guest offers
+    - Automated message generation for personalized guest offers
 
     📅 The formatter focuses on a specific date range:
     - The week after next week (starting from the current date)
@@ -30,17 +34,17 @@ class UnoccupiedDaysFormatter(Formatter):
     to process booking data retrieved from the Smoobu API and generate actionable insights.
     """
 
-    def __init__(self, email_sender: EmailSender, email_template_dir: str):
+    def __init__(self, smoobu_service: SmoobuService, message_template_dir: str):
         """
         Initialize the UnoccupiedDaysFormatter.
 
         Args:
-            email_sender (EmailSender): An instance of EmailSender for sending offer emails.
-            email_template_dir (str): The directory containing email templates.
+            smoobu_service (SmoobuService): An instance of the Smoobu-Service for sending offer emails.
+            message_template_dir (str): The directory containing email templates.
         """
-        self.email_sender = email_sender
-        self.env = Environment(loader=FileSystemLoader(email_template_dir))
-        self.email_template = self.env.get_template('email_template.html')
+        self.smoobu_service = smoobu_service
+        self.env = Environment(loader=FileSystemLoader(message_template_dir))
+        self.message_template = self.env.get_template('template.html')
 
     def format(self, data: Dict[str, List[tuple]]) -> str:
         """
@@ -71,7 +75,7 @@ class UnoccupiedDaysFormatter(Formatter):
         # Send emails for each apartment
         for apartment, bookings in data.items():
             events = self._analyze_bookings(bookings, date_range)
-            self._send_emails_for_apartment(apartment, events)
+            self._send_messages_for_apartment(apartment, events)
 
         return formatted_output
 
@@ -111,6 +115,7 @@ class UnoccupiedDaysFormatter(Formatter):
         return sorted(
             (
                 Event(
+                    id=occupied_days[current_day.date()]["reservation_id"],
                     date=current_day,
                     type=occupied_days[current_day.date()]['type'],
                     guest_name=occupied_days[current_day.date()]['guest_name'],
@@ -139,12 +144,13 @@ class UnoccupiedDaysFormatter(Formatter):
 
         occupied_days = {}
 
-        for arrival, departure, guest_email, guest_name, price in bookings:
+        for reservation_id, arrival, departure, guest_email, guest_name, price in bookings:
 
             arrival, departure = map(lambda x: datetime.strptime(x, "%Y-%m-%d").date(), (arrival, departure))
 
             for current in (arrival + timedelta(days=i) for i in range((departure - arrival).days + 1)):
                 occupied_days[current] = {
+                    'reservation_id': reservation_id,
                     'type': 'arrival' if current == arrival else 'departure' if current == departure else 'occupied',
                     'guest_name': guest_name,
                     'guest_email': guest_email,
@@ -238,61 +244,61 @@ class UnoccupiedDaysFormatter(Formatter):
             1: ColorScheme.YELLOW
         }.get(free_days, ColorScheme.RED)
 
-    def _send_emails_for_apartment(self, apartment: str, events: List[Event]) -> None:
+    def _send_messages_for_apartment(self, apartment: str, events: List[Event]) -> None:
         """
-         📧 Send offer emails to guests for a specific apartment.
+        Send messages to hosts for a specific apartment.
 
-         Args:
-             apartment (str): The name of the apartment.
-             events (List[Event]): List of arrival and departure events.
-         """
-
+        Args:
+            apartment (str): The name of the apartment.
+            events (List[Event]): List of arrival and departure events.
+        """
         guests = {}
 
         for event in events:
+            if event.id not in guests:
+                guests[event.id] = {'name': event.guest_name, 'events': []}
+            guests[event.id]['events'].append(event)
 
-            if event.guest_email not in guests:
-                guests[event.guest_email] = {'name': event.guest_name, 'events': []}
+        for reservation_id, guest_data in guests.items():
+            self._send_message(apartment, reservation_id, guest_data['name'], guest_data['events'])
 
-            guests[event.guest_email]['events'].append(event)
-
-        for guest_email, guest_data in guests.items():
-            self._send_email(apartment, guest_data['name'], guest_data['events'])
-
-    def _send_email(self, apartment: str, guest_name: str, events: List[Event]) -> None:
+    def _send_message(self, apartment: str, reservation_id: int, guest_name: str, events: List[Event]) -> None:
         """
-         📤 Send a personalized offer email to a guest.
+        Send a personalized message to a host about a guest.
 
-         Args:
-             apartment (str): The name of the apartment.
-             guest_name (str): The name of the guest.
-             events (List[Event]): List of events (arrivals/departures) for this guest.
+        Args:
+            apartment (str): The name of the apartment.
+            reservation_id (int): The ID of the reservation.
+            guest_name (str): The name of the guest.
+            events (List[Event]): List of events (arrivals/departures) for this guest.
         """
-
         arrival_event = next((event for event in events if event.type == 'arrival'), None)
         departure_event = next((event for event in events if event.type == 'departure'), None)
 
-        if arrival_event or departure_event:
-            subject = f"Exklusives Angebot für Ihren Aufenthalt in {apartment}"
+        if (arrival_event and arrival_event.free_days > 0) or (departure_event and departure_event.free_days > 0):
+            subject = f"Opportunity for {apartment}: {guest_name}'s Stay"
 
-            body = self._generate_email_body(apartment, guest_name, arrival_event, departure_event)
+            body = self._generate_message_body(apartment, guest_name, arrival_event, departure_event)
 
-            self.email_sender.send_email(events[0].guest_email, subject, body, is_html=True)
+            try:
+                response = self.smoobu_service.send_message_to_host(reservation_id, subject, body)
+                logger.info(f"Send to message to reservation with ID '{reservation_id}' with subject '{subject}' successfully. Response is: {response}")
+            except Exception as e:
+                logger.info(f"Error sending message for reservation {reservation_id}: {e}")
 
-    def _generate_email_body(self, apartment: str, guest_name: str, arrival_event: Optional[Event], departure_event: Optional[Event]) -> str:
+    def _generate_message_body(self, apartment: str, guest_name: str, arrival_event: Optional[Event], departure_event: Optional[Event]) -> str:
         """
-         ✍️ Generate the HTML body for the offer email using a template.
+        Generate the HTML body for the message using a template.
 
-         Args:
-             apartment (str): The name of the apartment.
-             guest_name (str): The name of the guest.
-             arrival_event (Optional[Event]): The arrival event, if any.
-             departure_event (Optional[Event]): The departure event, if any.
+        Args:
+            apartment (str): The name of the apartment.
+            guest_name (str): The name of the guest.
+            arrival_event (Optional[Event]): The arrival event, if any.
+            departure_event (Optional[Event]): The departure event, if any.
 
-         Returns:
-             str: The generated HTML email body.
-         """
-
+        Returns:
+            str: The generated HTML message body.
+        """
         template_data = {
             'guest_name': guest_name,
             'apartment': apartment,
@@ -300,4 +306,4 @@ class UnoccupiedDaysFormatter(Formatter):
             'departure_event': departure_event,
         }
 
-        return self.email_template.render(template_data)
+        return self.message_template.render(template_data)

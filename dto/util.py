@@ -20,6 +20,7 @@ class DateRange:
 
 @dataclass
 class Event:
+    id: int
     date: datetime
     type: str
     guest_name: str

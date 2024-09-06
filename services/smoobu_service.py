@@ -1,5 +1,5 @@
 from datetime import datetime, timedelta
-from typing import Dict, List
+from typing import Dict, List, Any
 
 from dto.reservation import ReservationsDTO, BookingDTO, ApartmentDTO, ChannelDTO
 from dto.user import UserDTO
@@ -146,8 +146,26 @@ class SmoobuService:
             if booking.apartment.name not in apartments:
                 apartments[booking.apartment.name] = []
 
-            # Check if all 5 values are not None
-            if all(value is not None for value in (booking.arrival, booking.departure, booking.email, booking.guest_name, booking.price)):
-                apartments[booking.apartment.name].append((booking.arrival, booking.departure, booking.email, booking.guest_name, booking.price))
+            # Check if all 6 values are not None
+            if all(value is not None for value in (booking.id, booking.arrival, booking.departure, booking.email, booking.guest_name, booking.price)):
+                apartments[booking.apartment.name].append((booking.id, booking.arrival, booking.departure, booking.email, booking.guest_name, booking.price))
 
         return apartments
+
+    def send_message_to_host(self, reservation_id: int, subject: str, message_body: str, internal: bool = False) -> Dict[str, Any]:
+        """
+        Send a message to the host for a specific reservation.
+
+        Args:
+            reservation_id (int): The ID of the reservation.
+            subject (str): The subject of the message.
+            message_body (str): The content of the message.
+            internal (bool, optional): If True, the message will only be visible to the host. Defaults to False.
+
+        Returns:
+            Dict[str, Any]: A dictionary containing the API response data.
+
+        Raises:
+            SmoobuAPIError: If there's an error in sending the message.
+        """
+        return self.api_client.send_message_to_host(reservation_id, subject, message_body, internal)
