@@ -66,18 +66,20 @@ class SmoobuApp:
 
         try:
             user_info = self.service.get_user_info()
-            print(self.user_formatter.format(user_info))
+            # print(self.user_formatter.format(user_info))
 
             reservations = self.service.get_reservations()
-            print(self.reservations_formatter.format(reservations))
+            # print(self.reservations_formatter.format(reservations))
 
             bookings_by_apartment = self.service.get_bookings_by_apartment()
-            print(self.booking_list_formatter.format(bookings_by_apartment))
+            # print(self.booking_list_formatter.format(bookings_by_apartment))
 
-            print(self.unoccupied_days_formatter.format(bookings_by_apartment))
+            unoccupied_days_analysis = self.unoccupied_days_formatter.format(bookings_by_apartment)
+            print(unoccupied_days_analysis)
+
+            logger.info("Analysis complete. Messages sent to hosts for relevant bookings.")
 
         except SmoobuAPIError as e:
             logger.error(f"An error occurred: {e}")
-            print(f"An error occurred: {e}")
 
         logger.info("Smoobu API Request Script completed")
