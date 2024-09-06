@@ -4,13 +4,11 @@
 # Website: ossenbrück.de | Email: hi@ossenbrück.de
 
 from app import SmoobuApp
-from config import SMTP_SERVER, SMTP_PORT, SMTP_USERNAME, SMTP_PASSWORD, SENDER_EMAIL
 from formatters.booking_list_formatter import BookingListFormatter
 from formatters.reservations_formatter import ReservationsFormatter
-from formatters.unoccupied_days_formatter import UnoccupiedDaysFormatter, EmailSender
+from formatters.unoccupied_days_formatter import UnoccupiedDaysFormatter
 from formatters.user_formatter import UserInfoFormatter
 from services.api_client import SmoobuAPIClient
-from services.email_sender import EmailConfig
 from services.smoobu_service import SmoobuService
 
 
@@ -32,22 +30,13 @@ def main():
     api_client = SmoobuAPIClient()
     service = SmoobuService(api_client)
 
-    # Create and configure email sender
-    email_sender = EmailSender(EmailConfig(
-        smtp_server=SMTP_SERVER,
-        smtp_port=SMTP_PORT,
-        smtp_username=SMTP_USERNAME,
-        smtp_password=SMTP_PASSWORD,
-        sender_email=SENDER_EMAIL
-    ))
-
     # Initialize and run the app
     app = SmoobuApp(
         service,
         ReservationsFormatter(),
         UserInfoFormatter(),
         BookingListFormatter(),
-        UnoccupiedDaysFormatter(email_sender, "email_templates")
+        UnoccupiedDaysFormatter(service, "message_templates")
     )
     app.run()
 
